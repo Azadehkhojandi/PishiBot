@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Pishi.Models
+namespace PishiBot.Models
 {
     public class BatchInput
     {

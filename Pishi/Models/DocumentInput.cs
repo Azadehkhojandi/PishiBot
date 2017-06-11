@@ -1,4 +1,4 @@
-namespace Pishi.Models
+namespace PishiBot.Models
 {
     public  class DocumentInput
     {
