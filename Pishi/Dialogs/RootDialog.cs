@@ -38,7 +38,7 @@ namespace PishiBot.Dialogs
         {
             var sentimentScore = await SentimentScore(text);
             var upsetReply = "maybe you can say something nicer. I like to hear how cute I'm";
-            var happyReply = "I think, I like you";
+            var happyReply = "I like you";
             if (!string.IsNullOrEmpty(preferredLanguage) && preferredLanguage != "en")
             {
                 var textTranslatorService = new TextTranslatorService();
