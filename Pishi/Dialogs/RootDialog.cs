@@ -46,7 +46,7 @@ namespace PishiBot.Dialogs
                 happyReply = await textTranslatorService.Translate("en", preferredLanguage, happyReply);
             }
 
-            var replyTextInPreferredLanguage = sentimentScore > 0.4
+            var replyTextInPreferredLanguage = sentimentScore >= 0.5
                 ? happyReply + " ,Meow xoxo"
                 : "Hiss, " + upsetReply;
             return replyTextInPreferredLanguage;
