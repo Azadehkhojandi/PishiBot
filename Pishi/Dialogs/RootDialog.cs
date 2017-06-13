@@ -36,37 +36,64 @@ namespace PishiBot.Dialogs
 
         private static async Task<string> CatReply(string text, string preferredLanguage)
         {
-            var service = new TextAnalyticsService();
-            var sentiments = await service.MakeSentimentRequest(text);
-            var sentimentScore = sentiments?.Documents?.FirstOrDefault()?.Score ?? 0;
-            var upsetReply = "Maybe you can say something nicer. I like to hear how cute I'm";
+            var sentimentScore = await SentimentScore(text);
+            var upsetReply = "maybe you can say something nicer. I like to hear how cute I'm";
+            var happyReply = "I think, I like you";
             if (!string.IsNullOrEmpty(preferredLanguage) && preferredLanguage != "en")
             {
                 var textTranslatorService = new TextTranslatorService();
-                upsetReply = await textTranslatorService.Translate( "en", preferredLanguage, upsetReply);
+                upsetReply = await textTranslatorService.Translate("en", preferredLanguage, upsetReply);
+                happyReply = await textTranslatorService.Translate("en", preferredLanguage, happyReply);
             }
-            
-            var replyTextInPreferredLanguage = sentimentScore > 0.6
-                ? "Meow xoxo"
-                : "Hiss," + upsetReply;
+
+            var replyTextInPreferredLanguage = sentimentScore > 0.4
+                ? happyReply + " ,Meow xoxo"
+                : "Hiss, " + upsetReply;
             return replyTextInPreferredLanguage;
         }
 
-        [LuisIntent("Get Pishi\'s attention")]
+        private static async Task<string> CatFoodReply(string text, string preferredLanguage)
+        {
+            var sentimentScore = await SentimentScore(text);
+            var upsetReply = "food and unpleasant words can not be in same statement!";
+            var happyReply = "I heard food! you are the best";
+            if (!string.IsNullOrEmpty(preferredLanguage) && preferredLanguage != "en")
+            {
+                var textTranslatorService = new TextTranslatorService();
+                upsetReply = await textTranslatorService.Translate("en", preferredLanguage, upsetReply);
+            }
+
+            var replyTextInPreferredLanguage = sentimentScore > 0.1
+                ? happyReply + " ,Meow xoxo"
+                : "Hiss, " + upsetReply;
+            return replyTextInPreferredLanguage;
+        }
+
+        private static async Task<double> SentimentScore(string text)
+        {
+            var service = new TextAnalyticsService();
+            var sentiments = await service.MakeSentimentRequest(text);
+            var sentimentScore = sentiments?.Documents?.FirstOrDefault()?.Score ?? 0;
+            return sentimentScore;
+        }
+
+        [LuisIntent("Food motivation")]
         public async Task GetAttention(IDialogContext context, LuisResult result)
         {
-            var entity = result.Entities.FirstOrDefault(x => x.Type == "Adjective");
-            if (entity != null)
+
+            if (!string.IsNullOrEmpty(result.Query))
             {
                 string detectedLanguage;
                 context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
-                var replyText = await CatReply(entity.Entity, detectedLanguage);
+               
+                var replyText = await CatFoodReply(result.Query, detectedLanguage);
+
+             
                 await context.PostAsync(replyText);
             }
             else
             {
-                await context.PostAsync("Meow xoxo");
-
+                await context.PostAsync("huh?");
             }
             context.Wait(MessageReceived);
         }
