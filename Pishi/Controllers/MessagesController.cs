@@ -1,6 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Autofac;
@@ -23,9 +26,19 @@ namespace PishiBot.Controllers
             
             if (activity.Type == ActivityTypes.Message)
             {
+                var message = activity.Text;
+                var audioAttachment = activity.Attachments?.FirstOrDefault(a => a.ContentType.Equals("audio/wav") || a.ContentType.Equals("application/octet-stream"));
+                if (audioAttachment != null)
+                {
+                    var connector = new ConnectorClient(new Uri(activity.ServiceUrl));
+                    var speechService= new MicrosoftCognitiveSpeechService();
+                    var stream = await GetAudioStream(connector, audioAttachment);
+                    message = await speechService.GetTextFromAudioAsync(stream);
+                }
+
                 var textTranslatorService = new TextTranslatorService();
 
-                var detectedLanguage = await textTranslatorService.Detect(activity.Text);
+                var detectedLanguage = await textTranslatorService.Detect(message);
 
                 var stateClient = activity.GetStateClient();
 
@@ -48,8 +61,8 @@ namespace PishiBot.Controllers
                     if (supportedLanguages.Contains(detectedLanguage))
                     {
                         var text = await textTranslatorService.Translate(detectedLanguage, "en",
-                            activity.Text);
-                        activity.Text = text;
+                            message);
+                        message = text;
 
                     }
                     else
@@ -134,5 +147,42 @@ namespace PishiBot.Controllers
 
             return null;
         }
+
+        //todo refactor
+        private static async Task<Stream> GetAudioStream(ConnectorClient connector, Attachment audioAttachment)
+        {
+            using (var httpClient = new HttpClient())
+            {
+                // The Skype attachment URLs are secured by JwtToken,
+                // you should set the JwtToken of your bot as the authorization header for the GET request your bot initiates to fetch the image.
+                // https://github.com/Microsoft/BotBuilder/issues/662
+                var uri = new Uri(audioAttachment.ContentUrl);
+                if (uri.Host.EndsWith("skype.com") && uri.Scheme == "https")
+                {
+                    httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await GetTokenAsync(connector));
+                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/octet-stream"));
+                }
+
+                return await httpClient.GetStreamAsync(uri);
+            }
+        }
+
+        /// <summary>
+        /// Gets the JwT token of the bot. 
+        /// </summary>
+        /// <param name="connector"></param>
+        /// <returns>JwT token of the bot</returns>
+        private static async Task<string> GetTokenAsync(ConnectorClient connector)
+        {
+            var credentials = connector.Credentials as MicrosoftAppCredentials;
+            if (credentials != null)
+            {
+                return await credentials.GetTokenAsync();
+            }
+
+            return null;
+        }
+
+
     }
 }
