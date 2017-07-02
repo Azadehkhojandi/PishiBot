@@ -15,6 +15,8 @@ namespace PishiBot.Services
     {
         Task<BatchResult> MakeSentimentRequest(string message);
     }
+
+    [Serializable]
     public class TextAnalyticsService: ITextAnalyticsService
     {
         public async Task<BatchResult> MakeSentimentRequest(string message)

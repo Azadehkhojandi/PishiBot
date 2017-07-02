@@ -7,7 +7,6 @@ using Microsoft.Bot.Builder.Luis;
 using Microsoft.Bot.Builder.Luis.Models;
 using Microsoft.Bot.Connector;
 using PishiBot.Services;
-using Microsoft.Bot.Builder.CognitiveServices.QnAMaker;
 
 namespace PishiBot.Dialogs
 {
@@ -15,15 +14,22 @@ namespace PishiBot.Dialogs
     [Serializable]
     public class RootDialog : LuisDialog<object>
     {
-        
+        private readonly ICatReplyService _catReplyService;
+
+        public RootDialog()
+        {
+            //todo DI
+             _catReplyService = new CatReplyService();
+        }
         private async Task AfterQnADialog(IDialogContext context, IAwaitable<IMessageActivity> result)
         {
             try
             {
                 var messageHandled = await result;
                 if (!(messageHandled.Value != null && bool.Parse(messageHandled.Value.ToString())))
-                { 
-                    await context.PostAsync("Unfortunately, I don't know the answer of your question.");
+                {
+                    //couldn't find the answer
+                   // await GenericCatReply(context, messageHandled.Text);
                 }
                
             }
@@ -46,77 +52,65 @@ namespace PishiBot.Dialogs
 
             if (!string.IsNullOrEmpty(result.Query))
             {
-                
-
-                //if question ends with ?
-                if (result.Query.EndsWith("?"))
-                {
-                    //call qanA
-                    //if answer return answer 
-                    var messageToForward = await message;
-                    await context.Forward<IMessageActivity, IMessageActivity>(new QnADialog(), AfterQnADialog, messageToForward, CancellationToken.None);
-                    return;
-                }
-
-                string detectedLanguage;
-                context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
-                var replyText = await CatReply(result.Query, detectedLanguage);
-                await context.PostAsync(replyText);
+                await GenericAnswer(context, message, result);
             }
             else
             {
                 await context.PostAsync("huh?");
+                context.Wait(MessageReceived);
             }
-            context.Wait(MessageReceived);
+            
         }
-        
-
-
-        private static async Task<string> CatReply(string text, string preferredLanguage)
+       
+        [LuisIntent("Greeting")]
+        public async Task Greeting(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
-            var sentimentScore = await SentimentScore(text);
-            var upsetReply = "maybe you can say something nicer. I like to hear how cute I'm";
-            var happyReply = "I like you";
-            if (!string.IsNullOrEmpty(preferredLanguage) && preferredLanguage != "en")
+            string detectedLanguage;
+            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
+            var replyText = await _catReplyService.GreetingReply(result.Query, detectedLanguage);
+
+
+            await context.PostAsync(replyText);
+        }
+
+        [LuisIntent("Start over")]
+        public async Task StartOver(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
+        {
+            string detectedLanguage;
+            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
+            await context.PostAsync("Start over");
+        }
+
+        [LuisIntent("Help")]
+        public async Task Help(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
+        {
+            string detectedLanguage;
+            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
+            await context.PostAsync("Help");
+        }
+
+        [LuisIntent("Play Time")]
+        public async Task PlayTime(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
+        {
+            string detectedLanguage;
+            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
+
+            if (result.Intents.FirstOrDefault()?.Score > 0.5)
             {
-                var textTranslatorService = new TextTranslatorService();
-                upsetReply = await textTranslatorService.Translate("en", preferredLanguage, upsetReply);
-                happyReply = await textTranslatorService.Translate("en", preferredLanguage, happyReply);
+                var replyText = await _catReplyService.PlayTimeReply(result.Query, detectedLanguage);
+                await context.PostAsync(replyText);
             }
-
-            var replyTextInPreferredLanguage = sentimentScore >= 0.5
-                ? happyReply + " ,Meow xoxo"
-                : "Hiss, " + upsetReply;
-            return replyTextInPreferredLanguage;
-        }
-
-        private static async Task<string> CatFoodReply(string text, string preferredLanguage)
-        {
-            var sentimentScore = await SentimentScore(text);
-            var upsetReply = "food and unpleasant words can not be in same statement!";
-            var happyReply = "I heard food! you are the best";
-            if (!string.IsNullOrEmpty(preferredLanguage) && preferredLanguage != "en")
+            else
             {
-                var textTranslatorService = new TextTranslatorService();
-                upsetReply = await textTranslatorService.Translate("en", preferredLanguage, upsetReply);
+                await GenericAnswer(context, message, result);
             }
 
-            var replyTextInPreferredLanguage = sentimentScore > 0.1
-                ? happyReply + " ,Meow xoxo"
-                : "Hiss, " + upsetReply;
-            return replyTextInPreferredLanguage;
-        }
 
-        private static async Task<double> SentimentScore(string text)
-        {
-            var service = new TextAnalyticsService();
-            var sentiments = await service.MakeSentimentRequest(text);
-            var sentimentScore = sentiments?.Documents?.FirstOrDefault()?.Score ?? 0;
-            return sentimentScore;
+           
         }
 
         [LuisIntent("Food motivation")]
-        public async Task GetAttention(IDialogContext context, LuisResult result)
+        public async Task GetAttention(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
 
             if (!string.IsNullOrEmpty(result.Query))
@@ -124,10 +118,18 @@ namespace PishiBot.Dialogs
                 string detectedLanguage;
                 context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
 
-                var replyText = await CatFoodReply(result.Query, detectedLanguage);
+                
+                if (result.Intents.FirstOrDefault()?.Score > 0.5)
+                {
+                    var replyText = await _catReplyService.CatFoodReply(result.Query, detectedLanguage);
+                    await context.PostAsync(replyText);
+                }
+                else
+                {
+                    await GenericAnswer(context, message, result);
+                }
 
-
-                await context.PostAsync(replyText);
+               
             }
             else
             {
@@ -137,6 +139,28 @@ namespace PishiBot.Dialogs
         }
 
 
+        private async Task GenericAnswer(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
+        {
+            //if question ends with ?
+            if (result.Query.EndsWith("?"))
+            {
+                //call qanA
+                await context.Forward(new QnADialog(), AfterQnADialog, await message, CancellationToken.None);
+            }
+            else
+            {
+                await GenericCatReply(context, result.Query);
+                context.Wait(MessageReceived);
+            }
+        }
+
+        private async Task GenericCatReply(IDialogContext context, string message)
+        {
+            string detectedLanguage;
+            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
+            var replyText = await _catReplyService.CatReply(message, detectedLanguage);
+            await context.PostAsync(replyText);
+        }
 
 
 

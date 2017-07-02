@@ -130,6 +130,7 @@
     <Compile Include="Models\DocumentResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\Authentication.cs" />
+    <Compile Include="Services\CatReplyService.cs" />
     <Compile Include="Services\MicrosoftCognitiveSpeechService.cs" />
     <Compile Include="Services\TextAnalyticsService.cs" />
     <Compile Include="Services\TextTranslatorAzureAuthToken.cs" />

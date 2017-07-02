@@ -28,6 +28,10 @@ namespace PishiBot.Dialogs
                 await context.PostAsync(response);
 
             }
+            else
+            {
+                await context.PostAsync("Unfortunately, I don't know the answer of your question.");
+            }
            
         }
 
