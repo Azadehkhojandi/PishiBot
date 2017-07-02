@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder.Dialogs;
@@ -7,6 +9,11 @@ using Microsoft.Bot.Builder.Luis;
 using Microsoft.Bot.Builder.Luis.Models;
 using Microsoft.Bot.Connector;
 using PishiBot.Services;
+using System.Configuration;
+using System.Xml;
+using System.Xml.Linq;
+using Newtonsoft.Json;
+using PishiBot.Models;
 
 namespace PishiBot.Dialogs
 {
@@ -21,28 +28,7 @@ namespace PishiBot.Dialogs
             //todo DI
              _catReplyService = new CatReplyService();
         }
-        private async Task AfterQnADialog(IDialogContext context, IAwaitable<IMessageActivity> result)
-        {
-            try
-            {
-                var messageHandled = await result;
-                if (!(messageHandled.Value != null && bool.Parse(messageHandled.Value.ToString())))
-                {
-                    //couldn't find the answer
-                   // await GenericCatReply(context, messageHandled.Text);
-                }
-               
-            }
-            catch (Exception e)
-            {
-                await context.PostAsync("something went wrong when I was looking for your answer.");
-                Console.WriteLine(e);
-                
-            }
-            
-
-            context.Wait(MessageReceived);
-        }
+        
 
 
 
@@ -87,9 +73,35 @@ namespace PishiBot.Dialogs
             string detectedLanguage;
             context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
             await context.PostAsync("Help");
+
+          
+            
+            
+        }
+        [LuisIntent("Show cat photos")]
+        public async Task ShowCatPhotos(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
+        {
+            
+            if (result.Intents.FirstOrDefault()?.Score > 0.5)
+            {
+                //call qanA
+                 context.Call(new CatPhotosDialog(), AfterCatPhotosDialog);
+
+                
+
+            }
+            else
+            {
+                await GenericAnswer(context, message, result);
+            }
+
+
+
         }
 
-        [LuisIntent("Play Time")]
+        
+
+        [LuisIntent("Play time")]
         public async Task PlayTime(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
             string detectedLanguage;
@@ -162,8 +174,30 @@ namespace PishiBot.Dialogs
             await context.PostAsync(replyText);
         }
 
+        private async Task AfterQnADialog(IDialogContext context, IAwaitable<IMessageActivity> result)
+        {
+            try
+            {
+                var messageHandled = await result;
+                if (!(messageHandled.Value != null && bool.Parse(messageHandled.Value.ToString())))
+                {
+                    //couldn't find the answer
+                    // await GenericCatReply(context, messageHandled.Text);
+                }
+
+            }
+            catch (Exception e)
+            {
+                await context.PostAsync("something went wrong when I was looking for your answer.");
+            }
 
 
+            context.Wait(MessageReceived);
+        }
+        private async Task AfterCatPhotosDialog(IDialogContext context, IAwaitable<bool> result)
+        {
+            context.Wait(MessageReceived);
+        }
 
     }
 }
