@@ -105,21 +105,8 @@ namespace PishiBot.Controllers
                         {
                             if (newMember.Id != message.Recipient.Id)
                             {
-                                var welcomeMessage = "hi, I'm Pishi the cat bot. I like being patted and hear how cute I am";
+                                var welcomeMessage = "hi, I'm Pishi the cat bot. I like being patted and hear how cute I am. Also, You can ask me cat related questions. type help whenever you need help!";
 
-                                //translate the welcome message 
-                                //var userData = await stateClient.BotState.GetUserDataAsync(message.ChannelId, message.From.Id);
-                                //var preferredLanguage = userData.GetProperty<string>("PreferredLanguage");
-                                //if (!string.IsNullOrEmpty(preferredLanguage))
-                                //{
-                                //    var textTranslatorService = new TextTranslatorService();
-                                   
-                                //        welcomeMessage = await textTranslatorService.Translate( "en", preferredLanguage,
-                                //           welcomeMessage);
-
-
-                                    
-                                //}
                                 reply.Text = welcomeMessage;
                                 await client.Conversations.ReplyToActivityAsync(reply);
                             }

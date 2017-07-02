@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Luis;
 using Microsoft.Bot.Builder.Luis.Models;
 using Microsoft.Bot.Connector;
 using PishiBot.Services;
+using Microsoft.Bot.Builder.CognitiveServices.QnAMaker;
 
 namespace PishiBot.Dialogs
 {
@@ -13,15 +15,49 @@ namespace PishiBot.Dialogs
     [Serializable]
     public class RootDialog : LuisDialog<object>
     {
+        
+        private async Task AfterQnADialog(IDialogContext context, IAwaitable<IMessageActivity> result)
+        {
+            try
+            {
+                var messageHandled = await result;
+                if (!(messageHandled.Value != null && bool.Parse(messageHandled.Value.ToString())))
+                { 
+                    await context.PostAsync("Unfortunately, I don't know the answer of your question.");
+                }
+               
+            }
+            catch (Exception e)
+            {
+                await context.PostAsync("something went wrong when I was looking for your answer.");
+                Console.WriteLine(e);
+                
+            }
+            
+
+            context.Wait(MessageReceived);
+        }
 
 
 
         [LuisIntent("")]
-        public async Task None(IDialogContext context, LuisResult result)
+        public async Task None(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
 
             if (!string.IsNullOrEmpty(result.Query))
             {
+                
+
+                //if question ends with ?
+                if (result.Query.EndsWith("?"))
+                {
+                    //call qanA
+                    //if answer return answer 
+                    var messageToForward = await message;
+                    await context.Forward<IMessageActivity, IMessageActivity>(new QnADialog(), AfterQnADialog, messageToForward, CancellationToken.None);
+                    return;
+                }
+
                 string detectedLanguage;
                 context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
                 var replyText = await CatReply(result.Query, detectedLanguage);
@@ -33,6 +69,8 @@ namespace PishiBot.Dialogs
             }
             context.Wait(MessageReceived);
         }
+        
+
 
         private static async Task<string> CatReply(string text, string preferredLanguage)
         {
@@ -85,10 +123,10 @@ namespace PishiBot.Dialogs
             {
                 string detectedLanguage;
                 context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
-               
+
                 var replyText = await CatFoodReply(result.Query, detectedLanguage);
 
-             
+
                 await context.PostAsync(replyText);
             }
             else
