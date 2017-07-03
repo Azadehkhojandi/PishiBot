@@ -30,26 +30,18 @@ namespace PishiBot.Services
             string uri = ConfigurationManager.AppSettings["TextTranslator.DetectUrl"] + "?text=" + textToDetect;
             HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(uri);
             httpWebRequest.Headers.Add("Authorization", authToken);
-            try
-            {
-                using (WebResponse response = httpWebRequest.GetResponse())
-                {
 
-                    using (Stream stream = response.GetResponseStream())
-                    {
-                        System.Runtime.Serialization.DataContractSerializer dcs = new System.Runtime.Serialization.DataContractSerializer(Type.GetType("System.String"));
-                        string languageDetected = (string)dcs.ReadObject(stream);
-                        return languageDetected;
-                    }
+            using (WebResponse response = httpWebRequest.GetResponse())
+            {
+
+                using (Stream stream = response.GetResponseStream())
+                {
+                    DataContractSerializer dcs = new System.Runtime.Serialization.DataContractSerializer(Type.GetType("System.String"));
+                    string languageDetected = (string)dcs.ReadObject(stream);
+                    return languageDetected;
                 }
             }
-            catch (Exception ex)
-            {
 
-                //kill exception
-            }
-
-            return null;
 
         }
 
@@ -60,7 +52,7 @@ namespace PishiBot.Services
             var authToken = await authTokenSource.GetAccessTokenAsync();
 
             string uri = "https://api.microsofttranslator.com/v2/Http.svc/GetLanguagesForTranslate";
-            HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(uri);
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create(uri);
             httpWebRequest.Headers.Add("Authorization", authToken);
             using (WebResponse response = httpWebRequest.GetResponse())
             {

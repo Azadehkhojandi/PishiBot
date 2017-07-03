@@ -24,8 +24,14 @@ namespace PishiBot.Dialogs
             if (acceptableResult(qnaMakerResults))
             {
                 var chosenQnAPair = qnaMakerResults.Answers.First();
-                var response = "Here is the match from FAQ:  \r\n  Q: " + chosenQnAPair.Questions.First() + "  \r\n A: " + qnaMakerResults.Answers.First().Answer;
-                await context.PostAsync(response);
+                var newMessage= context.MakeMessage();
+                newMessage.Attachments.Add(new ThumbnailCard()
+                {
+                    Title = chosenQnAPair.Questions.First(),
+                    Text = qnaMakerResults.Answers.First().Answer
+                }.ToAttachment());
+               
+                await context.PostAsync(newMessage);
 
             }
             else
@@ -42,16 +48,7 @@ namespace PishiBot.Dialogs
             await Task.CompletedTask;
         }
 
-        protected override Task QnAFeedbackStepAsync(IDialogContext context, QnAMakerResults qnaMakerResults)
-        {
-            return base.QnAFeedbackStepAsync(context, qnaMakerResults);
-        }
-
-        protected override bool IsConfidentAnswer(QnAMakerResults qnaMakerResults)
-        {
-            
-            return base.IsConfidentAnswer(qnaMakerResults);
-        }
+       
         
 
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -16,25 +17,30 @@ namespace PishiBot.Controllers
     [BotAuthentication]
     public class MessagesController : ApiController
     {
+        private readonly ICatReplyService _catReplyService;
 
+        public MessagesController()
+        {
+            _catReplyService=new CatReplyService();
+        }
         /// <summary>
         /// POST: api/Messages
         /// Receive a message from a user and reply to it
         /// </summary>
         public async Task<HttpResponseMessage> Post([FromBody]Activity activity)
         {
-            
+
             if (activity.Type == ActivityTypes.Message)
             {
                 var message = activity.Text;
-                var audioAttachment = activity.Attachments?.FirstOrDefault(a => a.ContentType.Equals("audio/wav") || a.ContentType.Equals("application/octet-stream"));
-                if (audioAttachment != null)
-                {
-                    var connector = new ConnectorClient(new Uri(activity.ServiceUrl));
-                    var speechService= new MicrosoftCognitiveSpeechService();
-                    var stream = await GetAudioStream(connector, audioAttachment);
-                    message = await speechService.GetTextFromAudioAsync(stream);
-                }
+                //var audioAttachment = activity.Attachments?.FirstOrDefault(a => a.ContentType.Equals("audio/wav") || a.ContentType.Equals("application/octet-stream"));
+                //if (audioAttachment != null)
+                //{
+                //    var connector = new ConnectorClient(new Uri(activity.ServiceUrl));
+                //    var speechService= new MicrosoftCognitiveSpeechService();
+                //    var stream = await GetAudioStream(connector, audioAttachment);
+                //    message = await speechService.GetTextFromAudioAsync(stream);
+                //}
 
                 var textTranslatorService = new TextTranslatorService();
 
@@ -55,22 +61,6 @@ namespace PishiBot.Controllers
                     await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
 
                 }
-                if (detectedLanguage != "en")
-                {
-                    var supportedLanguages = await textTranslatorService.GetLanguagesForTranslate();
-                    if (supportedLanguages.Contains(detectedLanguage))
-                    {
-                        var text = await textTranslatorService.Translate(detectedLanguage, "en",
-                            message);
-                        message = text;
-
-                    }
-                    else
-                    {
-                        //i don't understand the language
-
-                    }
-                }
 
 
                 await Conversation.SendAsync(activity, () => new Dialogs.RootDialog());
@@ -82,7 +72,7 @@ namespace PishiBot.Controllers
             var response = Request.CreateResponse(HttpStatusCode.OK);
             return response;
         }
-        
+
         private async Task<Activity> HandleSystemMessage(Activity message)
         {
             if (message.Type == ActivityTypes.DeleteUserData)
@@ -105,10 +95,9 @@ namespace PishiBot.Controllers
                         {
                             if (newMember.Id != message.Recipient.Id)
                             {
-                                var welcomeMessage = "hi, I'm Pishi the cat bot. I like being patted and hear how cute I am. Also, You can ask me cat related questions. type help whenever you need help!";
-
-                                reply.Text = welcomeMessage;
+                                reply.Attachments.Add(_catReplyService.Aboutme());
                                 await client.Conversations.ReplyToActivityAsync(reply);
+
                             }
                         }
                     }
@@ -134,6 +123,8 @@ namespace PishiBot.Controllers
 
             return null;
         }
+
+        
 
         //todo refactor
         private static async Task<Stream> GetAudioStream(ConnectorClient connector, Attachment audioAttachment)

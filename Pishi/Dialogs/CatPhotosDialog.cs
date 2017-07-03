@@ -33,7 +33,8 @@ namespace PishiBot.Dialogs
                 resume: ResumeAfterPromptDialog,
                 descriptions: new[] {"Yes please", "No Thanks"},
                 options: new[] {"Yes", "No"},
-                prompt: "Would you like to see more?"
+                prompt: "Would you like to see more?",
+                promptStyle:PromptStyle.Inline
             );
         }
 
@@ -82,7 +83,6 @@ namespace PishiBot.Dialogs
                 if (choice == "No")
                 {
                     context.Done(true);
-                    return;
                 }
                 else if (choice == "Yes")
                 {

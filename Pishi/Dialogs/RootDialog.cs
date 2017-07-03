@@ -9,11 +9,7 @@ using Microsoft.Bot.Builder.Luis;
 using Microsoft.Bot.Builder.Luis.Models;
 using Microsoft.Bot.Connector;
 using PishiBot.Services;
-using System.Configuration;
-using System.Xml;
-using System.Xml.Linq;
-using Newtonsoft.Json;
-using PishiBot.Models;
+
 
 namespace PishiBot.Dialogs
 {
@@ -22,13 +18,15 @@ namespace PishiBot.Dialogs
     public class RootDialog : LuisDialog<object>
     {
         private readonly ICatReplyService _catReplyService;
+        private readonly IRichCatsService _richCatsService;
 
         public RootDialog()
         {
             //todo DI
-             _catReplyService = new CatReplyService();
+            _catReplyService = new CatReplyService();
+            _richCatsService = new RichCatsService();
         }
-        
+
 
 
 
@@ -45,17 +43,15 @@ namespace PishiBot.Dialogs
                 await context.PostAsync("huh?");
                 context.Wait(MessageReceived);
             }
-            
+
         }
-       
+
         [LuisIntent("Greeting")]
         public async Task Greeting(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
             string detectedLanguage;
             context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
             var replyText = await _catReplyService.GreetingReply(result.Query, detectedLanguage);
-
-
             await context.PostAsync(replyText);
         }
 
@@ -72,22 +68,60 @@ namespace PishiBot.Dialogs
         {
             string detectedLanguage;
             context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
-            await context.PostAsync("Help");
 
-          
-            
-            
+            var newMessage = context.MakeMessage();
+
+            newMessage.Attachments.Add(_catReplyService.Aboutme());
+
+            await context.PostAsync(newMessage);
+
+
+
+
         }
+
+        [LuisIntent("Show rich cats")]
+        public async Task ShowRichCats(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
+        {
+            string detectedLanguage;
+            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
+
+            try
+            {
+                var test = await _richCatsService.RichCatsCards();
+                if (test.Any())
+                {
+                    var reply = context.MakeMessage();
+
+                    reply.AttachmentLayout = AttachmentLayoutTypes.Carousel;
+                    reply.Attachments = test;
+                    await context.PostAsync(reply);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+
+            }
+
+
+
+
+            await context.PostAsync("couldn't find any rich cat around you!");
+
+
+
+
+        }
+
         [LuisIntent("Show cat photos")]
         public async Task ShowCatPhotos(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
-            
+
             if (result.Intents.FirstOrDefault()?.Score > 0.5)
             {
                 //call qanA
-                 context.Call(new CatPhotosDialog(), AfterCatPhotosDialog);
-
-                
+                context.Call(new CatPhotosDialog(), AfterCatPhotosDialog);
 
             }
             else
@@ -99,7 +133,7 @@ namespace PishiBot.Dialogs
 
         }
 
-        
+
 
         [LuisIntent("Play time")]
         public async Task PlayTime(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
@@ -118,7 +152,7 @@ namespace PishiBot.Dialogs
             }
 
 
-           
+
         }
 
         [LuisIntent("Food motivation")]
@@ -130,7 +164,7 @@ namespace PishiBot.Dialogs
                 string detectedLanguage;
                 context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
 
-                
+
                 if (result.Intents.FirstOrDefault()?.Score > 0.5)
                 {
                     var replyText = await _catReplyService.CatFoodReply(result.Query, detectedLanguage);
@@ -141,7 +175,7 @@ namespace PishiBot.Dialogs
                     await GenericAnswer(context, message, result);
                 }
 
-               
+
             }
             else
             {
@@ -194,6 +228,7 @@ namespace PishiBot.Dialogs
 
             context.Wait(MessageReceived);
         }
+
         private async Task AfterCatPhotosDialog(IDialogContext context, IAwaitable<bool> result)
         {
             context.Wait(MessageReceived);

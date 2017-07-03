@@ -14,6 +14,8 @@ namespace PishiBot.Services
       
         Task<string> PlayTimeReply(string resultQuery, string detectedLanguage);
         Task<string> GreetingReply(string resultQuery, string detectedLanguage);
+
+        Attachment Aboutme();
     }
     [Serializable]
     public class CatReplyService: ICatReplyService
@@ -91,6 +93,26 @@ namespace PishiBot.Services
                 : "Hiss, " + upsetReply;
             return replyTextInPreferredLanguage;
         }
+        public Attachment Aboutme()
+        {
+           
+            var heroCard = new HeroCard
+            {
+                Title = "I'm Pishi the cat bot",
+                Subtitle = "Your digital predictable cat!",
+                Text = "I like being patted and hear how cute I am! You can offer me food or throw the ball and ask me to fetch.\n You can ask me cat related questions, type help whenever you need help!",
+                Images = new List<CardImage> { new CardImage("http://pishiapiappname.azurewebsites.net/Images/cat-icon.png") },
+                Buttons = new List<CardAction>
+                {
+                    new CardAction(ActionTypes.PostBack, "Start conversation", value: "You are so cute!"),
+                    new CardAction(ActionTypes.PostBack, "Show me Rich Cats", value: "Show me Rich Cats"),
+                    new CardAction(ActionTypes.PostBack, "Show cat Photos", value: "Show me cat Photos")
+                }
+            };
+
+            return heroCard.ToAttachment();
+        }
+
         private async Task<double> SentimentScore(string text)
         {
             
