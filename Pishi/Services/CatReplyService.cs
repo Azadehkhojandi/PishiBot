@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.Bot.Connector;
@@ -21,7 +22,7 @@ namespace PishiBot.Services
         Task<string> NoRichCatsMessage(string preferredLanguage);
 
         Task<string> UploadYourCatPhoto(string detectedLanguage);
-        Task<string> ReceivedImage(string detectedLanguage);
+        Task<string> ReceivedImage(string mediaType, long? contentLenghtBytes, string detectedLanguage);
     }
     [Serializable]
     public class CatReplyService : ICatReplyService
@@ -135,10 +136,10 @@ namespace PishiBot.Services
             return reply;
         }
 
-        public Task<string> ReceivedImage(string detectedLanguage)
+        public Task<string> ReceivedImage(string mediaType, long? contentLenghtBytes, string detectedLanguage)
         {
             var reply = _textTranslatorService.TranslateFromEnglish(detectedLanguage,
-                "I Received your image, let me see");
+                $"I Received {mediaType} with {contentLenghtBytes??0}.{((contentLenghtBytes??0)>0?" let me see your cat photo":"")} ");
             return reply;
         }
 

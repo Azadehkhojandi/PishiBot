@@ -60,7 +60,6 @@ namespace PishiBot.Services
     public interface IComputerVisionService
     {
         Task<ComputerVisionResult> MakeAnalysisRequest(byte[] image);
-        Task<ComputerVisionResult> MakeAnalysisRequest(string imagePath);
 
     }
     [Serializable]
@@ -88,23 +87,18 @@ namespace PishiBot.Services
 
                 var response = await client.PostAsync(uri, content);
 
-                var contentString = await response.Content.ReadAsStringAsync();
+                var result = await response.Content.ReadAsStringAsync();
 
-                var result = JsonConvert.DeserializeObject<ComputerVisionResult>(contentString);
+                 var computerVisionResult = JsonConvert.DeserializeObject<ComputerVisionResult>(result);
 
-                return result;
+                return computerVisionResult;
 
             }
 
         }
 
 
-        public async Task<ComputerVisionResult> MakeAnalysisRequest(string imageFilePath)
-        {
-            byte[] byteData = GetImageAsByteArray(imageFilePath);
-
-            return await MakeAnalysisRequest(byteData);
-        }
+        
 
 
 

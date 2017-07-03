@@ -20,66 +20,97 @@ namespace PishiBot.Dialogs
         public RateMyCatDialog()
         {
             _catPhotoAnalyzerService = new CatPhotoAnalyzerService();
-            _catReplyService=new CatReplyService();
+            _catReplyService = new CatReplyService();
         }
 
         public async Task StartAsync(IDialogContext context)
         {
-           
-                string detectedLanguage;
-                context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
 
-                var reply = await _catReplyService.UploadYourCatPhoto(detectedLanguage);
-                await context.PostAsync(reply);
-                context.Wait(MessageReceived);
-            
-           
+            string detectedLanguage;
+            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
+
+            var reply = await _catReplyService.UploadYourCatPhoto(detectedLanguage);
+            await context.PostAsync(reply);
+            context.Wait(MessageReceived);
+
+
 
         }
 
         private async Task MessageReceived(IDialogContext context, IAwaitable<IMessageActivity> result)
         {
 
-            string detectedLanguage;
-            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
-
-            var message = await result;
-
-            if (message.Attachments != null && message.Attachments.Any())
+            try
             {
-                var attachment = message.Attachments.First();
-                using (HttpClient httpClient = new HttpClient())
+                string detectedLanguage;
+                context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
+
+                var message = await result;
+
+                if (message.Attachments != null && message.Attachments.Any())
                 {
-                    // Skype & MS Teams attachment URLs are secured by a JwtToken, so we need to pass the token from our bot.
-                    if ((message.ChannelId.Equals("skype", StringComparison.InvariantCultureIgnoreCase) || message.ChannelId.Equals("msteams", StringComparison.InvariantCultureIgnoreCase))
-                        && new Uri(attachment.ContentUrl).Host.EndsWith("skype.com"))
+                    var attachment = message.Attachments.First();
+                    //await context.PostAsync(message.ChannelId);
+
+                    using (HttpClient httpClient = new HttpClient())
                     {
-                        var token = await new MicrosoftAppCredentials().GetTokenAsync();
-                        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                        // Skype & MS Teams attachment URLs are secured by a JwtToken, so we need to pass the token from our bot.
+                        if (
+                            (message.ChannelId.Equals("skype", StringComparison.InvariantCultureIgnoreCase) || message.ChannelId.Equals("msteams", StringComparison.InvariantCultureIgnoreCase))
+                            || new Uri(attachment.ContentUrl).Host.EndsWith("skype.com"))
+                        {
+                            var token = await new MicrosoftAppCredentials().GetTokenAsync();
+                            //await context.PostAsync($"token: {token}");
+                            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                        }
+                       // await context.PostAsync($"attachment.ContentUrl: {attachment.ContentUrl}");
+
+
+                        var responseMessage = await httpClient.GetAsync(attachment.ContentUrl);
+
+                        //await context.PostAsync($"responseMessage: {responseMessage}");
+
+                        var contentLenghtBytes = responseMessage.Content.Headers.ContentLength;
+
+                        //await context.PostAsync($"responseMessage.Content.Headers.ContentType.MediaType: {responseMessage.Content.Headers.ContentType.MediaType}");
+                        //await context.PostAsync($"contentLenghtBytes: {contentLenghtBytes}");
+
+                        var reply = await _catReplyService.ReceivedImage(responseMessage.Content.Headers.ContentType.MediaType, contentLenghtBytes, detectedLanguage);
+
+
+                        await context.PostAsync(reply);
+
+                        var imageByteArray = await responseMessage.Content.ReadAsByteArrayAsync();
+                        //await context.PostAsync("call MakeAnalysisRequest");
+                        //await context.PostAsync($"detectedLanguage: {detectedLanguage} ");
+                        //await context.PostAsync($"imageByteArray: {imageByteArray} ");
+                        //await context.PostAsync($"imageByteArray.Length: {imageByteArray.Length} ");
+                        //await context.PostAsync($"_catPhotoAnalyzerService: {_catPhotoAnalyzerService != null} ");
+
+                        var catPhotoAnalyzerReply = await _catPhotoAnalyzerService.MakeAnalysisRequest(imageByteArray, detectedLanguage);
+                        await context.PostAsync($"catPhotoAnalyzerReply: {catPhotoAnalyzerReply} ");
+
+                       // await context.PostAsync(catPhotoAnalyzerReply);
+                        context.Done(true);
+
                     }
-
-                    var responseMessage = await httpClient.GetAsync(attachment.ContentUrl);
-
-                    var contentLenghtBytes = responseMessage.Content.Headers.ContentLength;
-
-                    var reply = await _catReplyService.ReceivedImage(detectedLanguage);
-
-
-                    await context.PostAsync(reply);
-
-                    var imageByteArray = await responseMessage.Content.ReadAsByteArrayAsync();
-                    var catPhotoAnalyzerReply = await _catPhotoAnalyzerService.MakeAnalysisRequest(imageByteArray, detectedLanguage);
-                    await context.PostAsync(catPhotoAnalyzerReply);
-                    context.Done(true);
-
+                }
+                else
+                {
+                    context.Done(false);
                 }
             }
-            else
+            catch (Exception e)
             {
-               context.Done(false);
+                Console.WriteLine(e);
+                await context.PostAsync("error");
+                await context.PostAsync("e.Message " + e.Message);
+                await context.PostAsync("e.Source " + e.Source);
+                await context.PostAsync("e.StackTrace " + e.StackTrace);
             }
 
-           
+            context.Done(false);
+
         }
     }
 }
