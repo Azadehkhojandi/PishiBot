@@ -23,23 +23,27 @@ namespace PishiBot.Services
     public interface IRichCatsService
     {
         Task<IList<CatInfo>> RichCats();
-        Task<List<Attachment>> RichCatsCards();
+        Task<List<Attachment>> RichCatsCards(string preferredLanguage);
 
     }
 
     [Serializable]
-    public class RichCatsService: IRichCatsService
+    public class RichCatsService : IRichCatsService
     {
+        private readonly ITextTranslatorService _textTranslatorService;
 
-
+        public RichCatsService()
+        {
+            _textTranslatorService = new TextTranslatorService();
+        }
         public async Task<IList<CatInfo>> RichCats()
         {
-            using (var client = new HttpClient() )
+            using (var client = new HttpClient())
             {
                 var url = "http://pishiapiappname.azurewebsites.net/Content/RichCats.json";
                 using (var r = await client.GetAsync(new Uri(url)))
                 {
-                    string result = await r.Content.ReadAsStringAsync();
+                    var result = await r.Content.ReadAsStringAsync();
 
                     var cats = JsonConvert.DeserializeObject<RichCats>(result);
                     return cats.Cats;
@@ -48,24 +52,36 @@ namespace PishiBot.Services
             }
         }
 
-        public async Task< List<Attachment>> RichCatsCards()
+        public async Task<List<Attachment>> RichCatsCards(string preferredLanguage)
         {
             var cats = await RichCats();
             var cardsAttachments = new List<Attachment>();
 
+            string tmpCatName = "";
+            string tmpCatBio = "";
+
+
+            var tmpReadMore = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "read more");
+
             foreach (var cat in cats)
             {
+
+                tmpCatName = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, cat.Name);
+                tmpCatBio = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, cat.Bio);
+
+
+
                 cardsAttachments.Add(new HeroCard
                 {
                     Images = new List<CardImage>() { new CardImage(cat.Image) },
-                    Title = cat.Name,
-                    Text = cat.Bio,
+                    Title = tmpCatName,
+                    Text = tmpCatBio,
                     Buttons = new List<CardAction>()
                     {
                         new CardAction()
                         {
                             Type = ActionTypes.OpenUrl,
-                            Title = "read more",
+                            Title =tmpReadMore,
                             Value = cat.MoreInfoUrl
                         }
                     }

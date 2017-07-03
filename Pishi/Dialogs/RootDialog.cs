@@ -71,7 +71,7 @@ namespace PishiBot.Dialogs
 
             var newMessage = context.MakeMessage();
 
-            newMessage.Attachments.Add(_catReplyService.Aboutme());
+            newMessage.Attachments.Add(await _catReplyService.Aboutme(detectedLanguage));
 
             await context.PostAsync(newMessage);
 
@@ -83,33 +83,40 @@ namespace PishiBot.Dialogs
         [LuisIntent("Show rich cats")]
         public async Task ShowRichCats(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
-            string detectedLanguage;
-            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
 
-            try
+            if (result.Intents.FirstOrDefault()?.Score > 0.5)
             {
-                var test = await _richCatsService.RichCatsCards();
-                if (test.Any())
+                string detectedLanguage;
+                context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
+
+                try
                 {
-                    var reply = context.MakeMessage();
+                    var richCats = await _richCatsService.RichCatsCards(detectedLanguage);
+                    if (richCats.Any())
+                    {
+                        var reply = context.MakeMessage();
 
-                    reply.AttachmentLayout = AttachmentLayoutTypes.Carousel;
-                    reply.Attachments = test;
-                    await context.PostAsync(reply);
+                        reply.AttachmentLayout = AttachmentLayoutTypes.Carousel;
+                        reply.Attachments = richCats;
+                        await context.PostAsync(reply);
+                    }
+                    else
+                    {
+                        await context.PostAsync(await _catReplyService.NoRichCatsMessage(detectedLanguage));
+                    }
                 }
+                catch (Exception e)
+                {
+
+                    await context.PostAsync(await _catReplyService.ErrorMessage(detectedLanguage));
+
+                }
+
             }
-            catch (Exception e)
+            else
             {
-                Console.WriteLine(e);
-
+                await GenericAnswer(context, message, result);
             }
-
-
-
-
-            await context.PostAsync("couldn't find any rich cat around you!");
-
-
 
 
         }
@@ -121,8 +128,24 @@ namespace PishiBot.Dialogs
             if (result.Intents.FirstOrDefault()?.Score > 0.5)
             {
                 //call qanA
-                context.Call(new CatPhotosDialog(), AfterCatPhotosDialog);
+                context.Call(new CatPhotosDialog(), AfterDialogFinishes);
 
+            }
+            else
+            {
+                await GenericAnswer(context, message, result);
+            }
+
+
+
+        }
+        [LuisIntent("Rate my cat")]
+        public async Task Ratemycat(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
+        {
+
+            if (result.Intents.FirstOrDefault()?.Score > 0.4)
+            {
+                context.Call(new RateMyCatDialog(), AfterDialogFinishes);
             }
             else
             {
@@ -229,7 +252,7 @@ namespace PishiBot.Dialogs
             context.Wait(MessageReceived);
         }
 
-        private async Task AfterCatPhotosDialog(IDialogContext context, IAwaitable<bool> result)
+        private async Task AfterDialogFinishes(IDialogContext context, IAwaitable<bool> result)
         {
             context.Wait(MessageReceived);
         }

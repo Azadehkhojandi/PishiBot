@@ -11,32 +11,37 @@ namespace PishiBot.Services
     {
         Task<string> CatReply(string text, string preferredLanguage);
         Task<string> CatFoodReply(string text, string preferredLanguage);
-      
+
         Task<string> PlayTimeReply(string resultQuery, string detectedLanguage);
         Task<string> GreetingReply(string resultQuery, string detectedLanguage);
 
-        Attachment Aboutme();
+        Task<Attachment> Aboutme(string preferredLanguage);
+        Task<string> ErrorMessage(string preferredLanguage);
+
+        Task<string> NoRichCatsMessage(string preferredLanguage);
+
+        Task<string> UploadYourCatPhoto(string detectedLanguage);
+        Task<string> ReceivedImage(string detectedLanguage);
     }
     [Serializable]
-    public class CatReplyService: ICatReplyService
+    public class CatReplyService : ICatReplyService
     {
-        private ITextAnalyticsService _textAnalyticsService;
+        private readonly ITextAnalyticsService _textAnalyticsService;
+        private readonly ITextTranslatorService _textTranslatorService;
+
         public CatReplyService()
         {
             //todo di
             _textAnalyticsService = new TextAnalyticsService();
+            _textTranslatorService = new TextTranslatorService();
         }
-        public  async Task<string> CatReply(string text, string preferredLanguage)
+        public async Task<string> CatReply(string text, string preferredLanguage)
         {
             var sentimentScore = await SentimentScore(text);
-            var upsetReply = "maybe you can say something nicer. I like to hear how cute I'm";
-            var happyReply = "I like you";
-            if (!string.IsNullOrEmpty(preferredLanguage) && preferredLanguage != "en")
-            {
-                var textTranslatorService = new TextTranslatorService();
-                upsetReply = await textTranslatorService.Translate("en", preferredLanguage, upsetReply);
-                happyReply = await textTranslatorService.Translate("en", preferredLanguage, happyReply);
-            }
+
+            var upsetReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "maybe you can say something nicer. I like to hear how cute I'm");
+            var happyReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "I like you");
+
 
             var replyTextInPreferredLanguage = sentimentScore >= 0.5
                 ? happyReply + " ,Meow xoxo"
@@ -47,13 +52,9 @@ namespace PishiBot.Services
         public async Task<string> PlayTimeReply(string text, string preferredLanguage)
         {
             var sentimentScore = await SentimentScore(text);
-            var upsetReply = "you want me to play with you? no way!";
-            var happyReply = "I like playing!";
-            if (!string.IsNullOrEmpty(preferredLanguage) && preferredLanguage != "en")
-            {
-                var textTranslatorService = new TextTranslatorService();
-                upsetReply = await textTranslatorService.Translate("en", preferredLanguage, upsetReply);
-            }
+            var upsetReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "you want me to play with you? no way!"); ;
+            var happyReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "I like playing!"); ;
+
 
             var replyTextInPreferredLanguage = sentimentScore > 0.1
                 ? happyReply + " Meow xoxo"
@@ -63,13 +64,9 @@ namespace PishiBot.Services
         public async Task<string> GreetingReply(string text, string preferredLanguage)
         {
             var sentimentScore = await SentimentScore(text);
-            var upsetReply = "hi rude human being! be nice to cats!";
-            var happyReply = "hello :)";
-            if (!string.IsNullOrEmpty(preferredLanguage) && preferredLanguage != "en")
-            {
-                var textTranslatorService = new TextTranslatorService();
-                upsetReply = await textTranslatorService.Translate("en", preferredLanguage, upsetReply);
-            }
+            var upsetReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "hi rude human being! be nice to cats!");
+            var happyReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "hello :)");
+
 
             var replyTextInPreferredLanguage = sentimentScore > 0.1
                 ? happyReply + " ,Meow xoxo"
@@ -80,42 +77,74 @@ namespace PishiBot.Services
         public async Task<string> CatFoodReply(string text, string preferredLanguage)
         {
             var sentimentScore = await SentimentScore(text);
-            var upsetReply = "food and unpleasant words can not be in the same statement!";
-            var happyReply = "I heard food! you are the best";
-            if (!string.IsNullOrEmpty(preferredLanguage) && preferredLanguage != "en")
-            {
-                var textTranslatorService = new TextTranslatorService();
-                upsetReply = await textTranslatorService.Translate("en", preferredLanguage, upsetReply);
-            }
+            var upsetReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "food and unpleasant words can not be in the same statement!");
+            var happyReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "I heard food! you are the best");
+
 
             var replyTextInPreferredLanguage = sentimentScore > 0.1
                 ? happyReply + " ,Meow xoxo"
                 : "Hiss, " + upsetReply;
             return replyTextInPreferredLanguage;
         }
-        public Attachment Aboutme()
+        public async Task<Attachment> Aboutme(string preferredLanguage)
         {
-           
+
+
+            var title = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "I'm Pishi the cat bot");
+            var subtitle = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Your digital predictable cat!");
+            var text = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "I like being patted and hear how cute I am! You can also ask me cat related questions. If you say positive and nice sentences to cat bot you will get Meow, If you say negative sentences you will get Hiss! Few samples: You are a cute cat! Would you like to play? Do you want food? Start conversation or Type help whenever you need help!");
+            var action1 = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Show me Rich Cats");
+            var action2 = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Show cat Photos");
+            var action3 = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Rate my cat");
+
+
+
             var heroCard = new HeroCard
             {
-                Title = "I'm Pishi the cat bot",
-                Subtitle = "Your digital predictable cat!",
-                Text = "I like being patted and hear how cute I am! You can offer me food or throw the ball and ask me to fetch.\n You can ask me cat related questions, type help whenever you need help!",
+                Title = title,
+                Subtitle = subtitle,
+                Text = text,
                 Images = new List<CardImage> { new CardImage("http://pishiapiappname.azurewebsites.net/Images/cat-icon.png") },
                 Buttons = new List<CardAction>
                 {
-                    new CardAction(ActionTypes.PostBack, "Start conversation", value: "You are so cute!"),
-                    new CardAction(ActionTypes.PostBack, "Show me Rich Cats", value: "Show me Rich Cats"),
-                    new CardAction(ActionTypes.PostBack, "Show cat Photos", value: "Show me cat Photos")
+                    new CardAction(ActionTypes.PostBack, action1, value: action1),
+                    new CardAction(ActionTypes.PostBack, action2, value: action2),
+                    new CardAction(ActionTypes.PostBack, action3, value: action3)
                 }
             };
 
             return heroCard.ToAttachment();
         }
 
+        public async Task<string> ErrorMessage(string preferredLanguage)
+        {
+            var reply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "My cat brain is not working! Please try later");
+            return reply;
+        }
+
+        public async Task<string> NoRichCatsMessage(string preferredLanguage)
+        {
+
+            var reply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Couldn't find any rich cat near you");
+            return reply;
+        }
+        public async Task<string> UploadYourCatPhoto(string preferredLanguage)
+        {
+
+            var reply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Please upload your cat photo.");
+            return reply;
+        }
+
+        public Task<string> ReceivedImage(string detectedLanguage)
+        {
+            var reply = _textTranslatorService.TranslateFromEnglish(detectedLanguage,
+                "I Received your image, let me see");
+            return reply;
+        }
+
         private async Task<double> SentimentScore(string text)
         {
-            
+
             var sentiments = await _textAnalyticsService.MakeSentimentRequest(text);
             var sentimentScore = sentiments?.Documents?.FirstOrDefault()?.Score ?? 0;
             return sentimentScore;

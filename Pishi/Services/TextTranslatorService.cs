@@ -11,13 +11,19 @@ using System.Web;
 namespace PishiBot.Services
 {
 
+    public interface ITextTranslatorService
+    {
+        Task<string> Detect(string textToDetect);
+        Task<List<string>> GetLanguagesForTranslate();
 
-    public class TextTranslatorService
+        Task<string> Translate(string fromLanguage, string toLanguage, string text);
+        Task<string> TranslateFromEnglish(string toLanguage, string text);
+    }
 
+    [Serializable]
+    public class TextTranslatorService : ITextTranslatorService
 
     {
-
-
 
         //translator
         public async Task<string> Detect(string textToDetect)
@@ -66,8 +72,19 @@ namespace PishiBot.Services
             }
         }
 
+        public async Task<string> TranslateFromEnglish(string toLanguage, string text)
+        {
+            if (!string.IsNullOrEmpty(toLanguage) && toLanguage != "en")
+            {
+                return await Translate("en", toLanguage, text);
+            }
+            return text;
+        }
+
         public async Task<string> Translate(string fromLanguage, string toLanguage, string text)
         {
+
+
             //todo refactor 
             var authTokenSource = new TextTranslatorAzureAuthToken(ConfigurationManager.AppSettings["TextTranslator.Key"]);
             var authToken = await authTokenSource.GetAccessTokenAsync();
