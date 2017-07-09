@@ -23,6 +23,7 @@ namespace PishiBot.Services
 
         Task<string> UploadYourCatPhoto(string detectedLanguage);
         Task<string> ReceivedImage(string mediaType, long? contentLenghtBytes, string detectedLanguage);
+        Task<Attachment> CatEngagingReply(string detectedLanguage);
     }
     [Serializable]
     public class CatReplyService : ICatReplyService
@@ -92,7 +93,7 @@ namespace PishiBot.Services
 
 
             var title = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "I'm Pishi the cat bot");
-            var subtitle = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Your digital predictable cat!");
+            var subtitle = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Your virtual predictable cat!");
             var text = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "I like being patted and hear how cute I am! You can also ask me cat related questions. If you say positive and nice sentences to cat bot you will get Meow, If you say negative sentences you will get Hiss! Few samples: You are a cute cat! Would you like to play? Do you want food? Start conversation or Type help whenever you need help!");
             var action1 = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Show me Rich Cats");
             var action2 = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Show cat Photos");
@@ -141,6 +142,29 @@ namespace PishiBot.Services
             var reply = _textTranslatorService.TranslateFromEnglish(detectedLanguage,
                 $"I Received {mediaType} with {contentLenghtBytes??0}.{((contentLenghtBytes??0)>0?" let me see your cat photo":"")} ");
             return reply;
+        }
+
+        public async Task<Attachment> CatEngagingReply(string preferredLanguage)
+        {
+            var text = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "I like being patted and hear how cute I am! You can also ask me cat related questions.");
+            var action1 = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Show me Rich Cats");
+            var action2 = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Show cat Photos");
+            var action3 = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "Rate my cat");
+
+
+
+            var heroCard = new HeroCard
+            {
+                Text = text,
+                Buttons = new List<CardAction>
+                {
+                    new CardAction(ActionTypes.PostBack, action1, value: action1),
+                    new CardAction(ActionTypes.PostBack, action2, value: action2),
+                    new CardAction(ActionTypes.PostBack, action3, value: action3)
+                }
+            };
+
+            return heroCard.ToAttachment();
         }
 
         private async Task<double> SentimentScore(string text)

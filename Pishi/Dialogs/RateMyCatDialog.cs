@@ -25,16 +25,34 @@ namespace PishiBot.Dialogs
 
         public async Task StartAsync(IDialogContext context)
         {
+            try
+            {
+                await AskForCatImage(context);
+            }
+            catch (Exception e)
+            {
+                context.Fail(e);
+                //Console.WriteLine(e);
+                //await context.PostAsync("error");
+                //await context.PostAsync("e.Message " + e.Message);
+                //await context.PostAsync("e.Source " + e.Source);
+                //await context.PostAsync("e.StackTrace " + e.StackTrace);
+            }
 
+           
+
+
+
+        }
+
+        private async Task AskForCatImage(IDialogContext context)
+        {
             string detectedLanguage;
             context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
 
             var reply = await _catReplyService.UploadYourCatPhoto(detectedLanguage);
             await context.PostAsync(reply);
             context.Wait(MessageReceived);
-
-
-
         }
 
         private async Task MessageReceived(IDialogContext context, IAwaitable<IMessageActivity> result)
@@ -60,10 +78,10 @@ namespace PishiBot.Dialogs
                             || new Uri(attachment.ContentUrl).Host.EndsWith("skype.com"))
                         {
                             var token = await new MicrosoftAppCredentials().GetTokenAsync();
-                            //await context.PostAsync($"token: {token}");
+                            await context.PostAsync($"token: {token}");
                             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
                         }
-                       // await context.PostAsync($"attachment.ContentUrl: {attachment.ContentUrl}");
+                        await context.PostAsync($"attachment.ContentUrl: {attachment.ContentUrl}");
 
 
                         var responseMessage = await httpClient.GetAsync(attachment.ContentUrl);
@@ -76,8 +94,6 @@ namespace PishiBot.Dialogs
                         //await context.PostAsync($"contentLenghtBytes: {contentLenghtBytes}");
 
                         var reply = await _catReplyService.ReceivedImage(responseMessage.Content.Headers.ContentType.MediaType, contentLenghtBytes, detectedLanguage);
-
-
                         await context.PostAsync(reply);
 
                         var imageByteArray = await responseMessage.Content.ReadAsByteArrayAsync();
@@ -88,10 +104,17 @@ namespace PishiBot.Dialogs
                         //await context.PostAsync($"_catPhotoAnalyzerService: {_catPhotoAnalyzerService != null} ");
 
                         var catPhotoAnalyzerReply = await _catPhotoAnalyzerService.MakeAnalysisRequest(imageByteArray, detectedLanguage);
-                        await context.PostAsync($"catPhotoAnalyzerReply: {catPhotoAnalyzerReply} ");
+                        //await context.PostAsync($"catPhotoAnalyzerReply: {catPhotoAnalyzerReply} ");
 
-                       // await context.PostAsync(catPhotoAnalyzerReply);
-                        context.Done(true);
+                        await context.PostAsync(catPhotoAnalyzerReply);
+                        PromptDialog.Choice(
+                            context: context,
+                            resume: ResumeAfterPromptDialog,
+                            descriptions: new[] { "Yes please", "No Thanks" },
+                            options: new[] { "Yes please", "No Thanks" },
+                            prompt: "Would you like to check another photo?"
+
+                        );
 
                     }
                 }
@@ -102,15 +125,38 @@ namespace PishiBot.Dialogs
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
-                await context.PostAsync("error");
-                await context.PostAsync("e.Message " + e.Message);
-                await context.PostAsync("e.Source " + e.Source);
-                await context.PostAsync("e.StackTrace " + e.StackTrace);
+                //Console.WriteLine(e);
+                //await context.PostAsync("error");
+                //await context.PostAsync("e.Message " + e.Message);
+                //await context.PostAsync("e.Source " + e.Source);
+                //await context.PostAsync("e.StackTrace " + e.StackTrace);
+                context.Fail(e);
             }
 
-            context.Done(false);
+            
 
+        }
+
+        private async Task ResumeAfterPromptDialog(IDialogContext context, IAwaitable<string> result)
+        {
+            try
+            {
+                var choice = await result;
+                if (choice.ToLower().Contains("no"))
+                {
+                    context.Done(true);
+                }
+                else 
+                {
+                    await AskForCatImage(context);
+
+                }
+
+            }
+            catch (Exception e)
+            {
+                context.Fail(e);
+            }
         }
     }
 }

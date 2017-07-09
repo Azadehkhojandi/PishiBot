@@ -36,6 +36,7 @@ namespace PishiBot.Controllers
 
                 var textTranslatorService = new TextTranslatorService();
 
+           
                 var detectedLanguage = await textTranslatorService.Detect(message);
 
                 var stateClient = activity.GetStateClient();
@@ -58,6 +59,9 @@ namespace PishiBot.Controllers
                     activity.Text = await textTranslatorService.Translate(preferredLanguage, "en", activity.Text);
 
                 }
+
+               
+
 
                 await Conversation.SendAsync(activity, () => new Dialogs.RootDialog());
             }
@@ -99,6 +103,8 @@ namespace PishiBot.Controllers
                     }
                 }
 
+
+
             }
             else if (message.Type == ActivityTypes.ContactRelationUpdate)
             {
@@ -122,7 +128,7 @@ namespace PishiBot.Controllers
 
 
 
-        
+
 
 
     }

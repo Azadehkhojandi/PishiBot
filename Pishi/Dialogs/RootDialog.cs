@@ -18,16 +18,12 @@ namespace PishiBot.Dialogs
     public class RootDialog : LuisDialog<object>
     {
         private readonly ICatReplyService _catReplyService;
-        private readonly IRichCatsService _richCatsService;
 
         public RootDialog()
         {
             //todo DI
             _catReplyService = new CatReplyService();
-            _richCatsService = new RichCatsService();
         }
-
-
 
 
         [LuisIntent("")]
@@ -49,33 +45,33 @@ namespace PishiBot.Dialogs
         [LuisIntent("Greeting")]
         public async Task Greeting(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
-            string detectedLanguage;
-            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
-            var replyText = await _catReplyService.GreetingReply(result.Query, detectedLanguage);
-            await context.PostAsync(replyText);
+            if (result.Intents.FirstOrDefault()?.Score > 0.1)
+            {
+                context.Call(new GreetingDialog(), AfterDialogFinishesConditionalEngagement);
+            }
+            else
+            {
+                await GenericAnswer(context, message, result);
+            }
+           
+
         }
 
-        [LuisIntent("Start over")]
-        public async Task StartOver(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
-        {
-            string detectedLanguage;
-            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
-            await context.PostAsync("Start over");
-        }
 
         [LuisIntent("Help")]
         public async Task Help(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
-            string detectedLanguage;
-            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
-
-            var newMessage = context.MakeMessage();
-
-            newMessage.Attachments.Add(await _catReplyService.Aboutme(detectedLanguage));
-
-            await context.PostAsync(newMessage);
 
 
+            if (result.Intents.FirstOrDefault()?.Score > 0.5)
+            {
+                context.Call(new HelpDialog(), AfterDialogFinishesConditionalEngagement);
+
+            }
+            else
+            {
+                await GenericAnswer(context, message, result);
+            }
 
 
         }
@@ -86,31 +82,7 @@ namespace PishiBot.Dialogs
 
             if (result.Intents.FirstOrDefault()?.Score > 0.5)
             {
-                string detectedLanguage;
-                context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
-
-                try
-                {
-                    var richCats = await _richCatsService.RichCatsCards(detectedLanguage);
-                    if (richCats.Any())
-                    {
-                        var reply = context.MakeMessage();
-
-                        reply.AttachmentLayout = AttachmentLayoutTypes.Carousel;
-                        reply.Attachments = richCats;
-                        await context.PostAsync(reply);
-                    }
-                    else
-                    {
-                        await context.PostAsync(await _catReplyService.NoRichCatsMessage(detectedLanguage));
-                    }
-                }
-                catch (Exception e)
-                {
-
-                    await context.PostAsync(await _catReplyService.ErrorMessage(detectedLanguage));
-
-                }
+                context.Call(new RichCatsDialog(), AfterDialogFinishesConditionalEngagement);
 
             }
             else
@@ -127,7 +99,7 @@ namespace PishiBot.Dialogs
 
             if (result.Intents.FirstOrDefault()?.Score > 0.5)
             {
-                //call qanA
+                //call cat photos dialog
                 context.Call(new CatPhotosDialog(), AfterDialogFinishes);
 
             }
@@ -142,38 +114,41 @@ namespace PishiBot.Dialogs
         [LuisIntent("Rate my cat")]
         public async Task Ratemycat(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
-
-            if (result.Intents.FirstOrDefault()?.Score > 0.4)
+            try
             {
-                context.Call(new RateMyCatDialog(), AfterDialogFinishes);
+                if (result.Intents.FirstOrDefault()?.Score > 0.4)
+                {
+                    context.Call(new RateMyCatDialog(), AfterDialogFinishes);
+                }
+                else
+                {
+                    await GenericAnswer(context, message, result);
+                }
             }
-            else
+            catch (Exception e)
             {
-                await GenericAnswer(context, message, result);
+                Console.WriteLine(e);
+                await context.PostAsync(e.Message);
             }
+           
 
 
 
         }
 
-
-
         [LuisIntent("Play time")]
         public async Task PlayTime(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
-            string detectedLanguage;
-            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
 
             if (result.Intents.FirstOrDefault()?.Score > 0.5)
             {
-                var replyText = await _catReplyService.PlayTimeReply(result.Query, detectedLanguage);
-                await context.PostAsync(replyText);
+                context.Call(new PlayTimeDialog(), AfterDialogFinishesConditionalEngagement);
+
             }
             else
             {
                 await GenericAnswer(context, message, result);
             }
-
 
 
         }
@@ -182,31 +157,17 @@ namespace PishiBot.Dialogs
         public async Task GetAttention(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
 
-            if (!string.IsNullOrEmpty(result.Query))
+
+            if (result.Intents.FirstOrDefault()?.Score > 0.5)
             {
-                string detectedLanguage;
-                context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
-
-
-                if (result.Intents.FirstOrDefault()?.Score > 0.5)
-                {
-                    var replyText = await _catReplyService.CatFoodReply(result.Query, detectedLanguage);
-                    await context.PostAsync(replyText);
-                }
-                else
-                {
-                    await GenericAnswer(context, message, result);
-                }
-
+                context.Call(new FoodMotivationDialog(), AfterDialogFinishesConditionalEngagement);
 
             }
             else
             {
-                await context.PostAsync("huh?");
+                await GenericAnswer(context, message, result);
             }
-            context.Wait(MessageReceived);
         }
-
 
         private async Task GenericAnswer(IDialogContext context, IAwaitable<IMessageActivity> message, LuisResult result)
         {
@@ -252,10 +213,43 @@ namespace PishiBot.Dialogs
             context.Wait(MessageReceived);
         }
 
+        private async Task AfterDialogFinishesConditionalEngagement(IDialogContext context, IAwaitable<bool> result)
+        {
+            try
+            {
+                var success = await result;
+                if (!success)
+                {
+                    var message = await EngagmentMessage(context);
+                    await context.PostAsync(message);
+                }
+
+               
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+               
+            }
+             context.Wait(MessageReceived);
+
+        }
+
         private async Task AfterDialogFinishes(IDialogContext context, IAwaitable<bool> result)
         {
+            var message = await EngagmentMessage(context);
+            await context.PostAsync(message);
             context.Wait(MessageReceived);
         }
 
+        private async Task<IMessageActivity> EngagmentMessage(IDialogContext context)
+        {
+            string detectedLanguage;
+            context.UserData.TryGetValue("PreferredLanguage", out detectedLanguage);
+            var engagingReply = await _catReplyService.CatEngagingReply(detectedLanguage);
+            var message = context.MakeMessage();
+            message.Attachments.Add(engagingReply);
+            return message;
+        }
     }
 }
