@@ -41,8 +41,10 @@ namespace PishiBot.Services
         {
             var sentimentScore = await SentimentScore(text);
 
-            var upsetReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "maybe you can say something nicer. I like to hear how cute I'm");
-            var happyReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage, "I like you");
+            var upsetReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage,
+                "maybe you can say something nicer. I like to hear how cute I'm");
+            var happyReply = await _textTranslatorService.TranslateFromEnglish(preferredLanguage,
+                "I like you");
 
 
             var replyTextInPreferredLanguage = sentimentScore >= 0.5
@@ -140,7 +142,7 @@ namespace PishiBot.Services
         public Task<string> ReceivedImage(string mediaType, long? contentLenghtBytes, string detectedLanguage)
         {
             var reply = _textTranslatorService.TranslateFromEnglish(detectedLanguage,
-                $"I Received {mediaType} with {contentLenghtBytes??0}.{((contentLenghtBytes??0)>0?" let me see your cat photo":"")} ");
+                $"I Received {mediaType} with {contentLenghtBytes ?? 0}.{((contentLenghtBytes ?? 0) > 0 ? " let me see your cat photo" : "")} ");
             return reply;
         }
 

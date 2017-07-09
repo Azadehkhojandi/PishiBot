@@ -19,7 +19,8 @@ namespace PishiBot.Dialogs
         }
 
         // Override to also include the knowledge base question with the answer on confident matches
-        protected override async Task RespondFromQnAMakerResultAsync(IDialogContext context, IMessageActivity message, QnAMakerResults qnaMakerResults)
+        protected override async Task RespondFromQnAMakerResultAsync
+            (IDialogContext context, IMessageActivity message, QnAMakerResults qnaMakerResults)
         {
             if (acceptableResult(qnaMakerResults))
             {

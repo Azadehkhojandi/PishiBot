@@ -71,7 +71,8 @@ namespace PishiBot.Services
             var client = new HttpClient();
 
             // Request headers.
-            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", ConfigurationManager.AppSettings["ComputerVision.Key"]);
+            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key",
+                ConfigurationManager.AppSettings["ComputerVision.Key"]);
 
             // Request parameters. A third optional parameter is "details".
             var requestParameters = "visualFeatures=Categories,Description&language=en";
@@ -98,16 +99,6 @@ namespace PishiBot.Services
         }
 
 
-        
-
-
-
-        static byte[] GetImageAsByteArray(string imageFilePath)
-        {
-            var fileStream = new FileStream(imageFilePath, FileMode.Open, FileAccess.Read);
-            var binaryReader = new BinaryReader(fileStream);
-            return binaryReader.ReadBytes((int)fileStream.Length);
-        }
 
     }
 }

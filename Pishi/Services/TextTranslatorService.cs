@@ -25,31 +25,7 @@ namespace PishiBot.Services
 
     {
 
-        //translator
-        public async Task<string> Detect(string textToDetect)
-        {
-            //todo refactor 
-            var authTokenSource = new TextTranslatorAzureAuthToken(ConfigurationManager.AppSettings["TextTranslator.Key"]);
-            var authToken = await authTokenSource.GetAccessTokenAsync();
 
-
-            string uri = ConfigurationManager.AppSettings["TextTranslator.DetectUrl"] + "?text=" + textToDetect;
-            HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(uri);
-            httpWebRequest.Headers.Add("Authorization", authToken);
-
-            using (WebResponse response = httpWebRequest.GetResponse())
-            {
-
-                using (Stream stream = response.GetResponseStream())
-                {
-                    DataContractSerializer dcs = new System.Runtime.Serialization.DataContractSerializer(Type.GetType("System.String"));
-                    string languageDetected = (string)dcs.ReadObject(stream);
-                    return languageDetected;
-                }
-            }
-
-
-        }
 
         public async Task<List<string>> GetLanguagesForTranslate()
         {
@@ -80,24 +56,46 @@ namespace PishiBot.Services
             }
             return text;
         }
-
-        public async Task<string> Translate(string fromLanguage, string toLanguage, string text)
+        //translator
+        public async Task<string> Detect(string textToDetect)
         {
-
-
             //todo refactor 
             var authTokenSource = new TextTranslatorAzureAuthToken(ConfigurationManager.AppSettings["TextTranslator.Key"]);
             var authToken = await authTokenSource.GetAccessTokenAsync();
 
-
-            string uri = "https://api.microsofttranslator.com/v2/Http.svc/Translate?text=" + HttpUtility.UrlEncode(text) + "&from=" + fromLanguage + "&to=" + toLanguage;
-            HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(uri);
+            var uri = ConfigurationManager.AppSettings["TextTranslator.DetectUrl"] + "?text=" + textToDetect;
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create(uri);
             httpWebRequest.Headers.Add("Authorization", authToken);
-            using (WebResponse response = httpWebRequest.GetResponse())
-            using (Stream stream = response.GetResponseStream())
+
+            using (var response = httpWebRequest.GetResponse())
             {
-                DataContractSerializer dcs = new DataContractSerializer(Type.GetType("System.String"));
-                string translation = (string)dcs.ReadObject(stream);
+
+                using (Stream stream = response.GetResponseStream())
+                {
+                    var dcs = new DataContractSerializer(Type.GetType("System.String"));
+                    var languageDetected = (string)dcs.ReadObject(stream);
+                    return languageDetected;
+                }
+            }
+        }
+
+
+        public async Task<string> Translate(string fromLanguage, string toLanguage, string text)
+        {
+            //todo refactor 
+            var authTokenSource = new TextTranslatorAzureAuthToken(ConfigurationManager.AppSettings["TextTranslator.Key"]);
+            var authToken = await authTokenSource.GetAccessTokenAsync();
+            var uri = "https://api.microsofttranslator.com/v2/Http.svc/Translate?text=" +
+                HttpUtility.UrlEncode(text) + "&from=" + fromLanguage + "&to=" + toLanguage;
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create(uri);
+
+            httpWebRequest.Headers.Add("Authorization", authToken);
+
+            using (var response = httpWebRequest.GetResponse())
+            using (var stream = response.GetResponseStream())
+            {
+                var dcs = new DataContractSerializer(Type.GetType("System.String"));
+                var translation = (string)dcs.ReadObject(stream);
                 return translation;
             }
         }
