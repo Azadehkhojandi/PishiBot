@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web;
-using System.Xml.Linq;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Connector;
 using PishiBot.Services;
@@ -38,9 +35,9 @@ namespace PishiBot.Dialogs
             );
 
         }
-
        
-        private async Task ResumeAfterCategoriesDialog(IDialogContext context, IAwaitable<string> result)
+        private async Task ResumeAfterCategoriesDialog
+            (IDialogContext context, IAwaitable<string> result)
         {
             try
             {
@@ -81,7 +78,6 @@ namespace PishiBot.Dialogs
             );
         }
 
-
         private async Task ShowImages(IDialogContext context,string catCategory = null)
         {
             var images = await _catPhotosService.GetPhotos(10, catCategory);
@@ -118,7 +114,8 @@ namespace PishiBot.Dialogs
 
         }
 
-        private async Task ResumeAfterPromptDialog(IDialogContext context, IAwaitable<string> result)
+        private async Task ResumeAfterPromptDialog
+            (IDialogContext context, IAwaitable<string> result)
         {
             try
             {
@@ -145,10 +142,6 @@ namespace PishiBot.Dialogs
 
         }
 
-
     }
-
-
-
 
 }

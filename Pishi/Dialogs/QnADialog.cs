@@ -26,7 +26,7 @@ namespace PishiBot.Dialogs
             {
                 var chosenQnAPair = qnaMakerResults.Answers.First();
                 var newMessage= context.MakeMessage();
-                newMessage.Attachments.Add(new ThumbnailCard()
+                newMessage.Attachments.Add(new HeroCard()
                 {
                     Title = chosenQnAPair.Questions.First(),
                     Text = qnaMakerResults.Answers.First().Answer

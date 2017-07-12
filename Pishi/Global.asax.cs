@@ -19,10 +19,18 @@ namespace PishiBot
         }
         private void RegisterBotModules()
         {
-            Conversation.UpdateContainer(builder =>
+            try
             {
-                builder.RegisterModule<GlobalMessageHandlersBotModule>();
-            });
+                Conversation.UpdateContainer(builder =>
+                {
+                    builder.RegisterModule<GlobalMessageHandlersBotModule>();
+                });
+            }
+            catch (Exception e)
+            {
+               //kill exception
+            }
+           
         }
     }
 }
